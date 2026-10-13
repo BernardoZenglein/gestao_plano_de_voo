@@ -1,0 +1,190 @@
+@startuml
+skinparam classAttributeIconSize 0
+hide empty members
+
+' ===== Malha aérea =====
+
+class Aeroporto {
+    - codigo : String
+    - nome : String
+    - qtdVagas : Integer
+}
+
+note right of Aeroporto
+  Vagas numeradas de 1 a qtdVagas.
+  Qualquer vaga recebe qualquer aeronave.
+end note
+
+class Aerovia {
+    - id : String
+    - distanciaKm : Integer
+}
+
+note right of Aerovia
+  Orientada e imutável após o cadastro.
+end note
+
+Aerovia "*" --> "1" Aeroporto : origem
+Aerovia "*" --> "1" Aeroporto : destino
+
+' ===== Aeronaves e regras de operação =====
+
+abstract Aeronave {
+    - prefixo : String
+    - velocidadeDeCruzeiro : Integer
+    - autonomia : Integer
+    + distanciaMaximaSemReabastecimento() : Double
+    + podeOperar(altitude : Integer, entrada : LocalDateTime, saida : LocalDateTime) : Boolean
+}
+
+class AeronaveParticular {
+    - empresaResponsavelPelaManutencao : String
+}
+
+class AeronaveComercialDePassageiro {
+    - companhiaAerea : String
+    - capacidadeMaxPassageiro : Integer
+}
+
+class AeronaveComercialDeCarga {
+    - companhiaAerea : String
+    - capacidadeMaxCargaTn : Double
+}
+
+Aeronave <|-- AeronaveParticular
+Aeronave <|-- AeronaveComercialDePassageiro
+Aeronave <|-- AeronaveComercialDeCarga
+
+interface RegraDeOperacao {
+    + permite(altitude : Integer, entrada : LocalDateTime, saida : LocalDateTime) : Boolean
+}
+
+class FaixaDeAltitude {
+    - minimo : Integer
+    - maximo : Integer
+}
+
+class JanelaHoraria {
+    - inicio : LocalTime
+    - fim : LocalTime
+}
+
+RegraDeOperacao <|.. FaixaDeAltitude
+RegraDeOperacao <|.. JanelaHoraria
+Aeronave "*" --> "1..*" RegraDeOperacao : regras
+
+note bottom of RegraDeOperacao
+  Particular: FaixaDeAltitude 25.000 a 27.000.
+  Passageiros: FaixaDeAltitude 28.000 a 35.000.
+  Carga: JanelaHoraria 00:00 a 06:00 (fim exclusivo).
+  Nova regra = nova implementação.
+end note
+
+' ===== Plano de voo =====
+
+class Piloto {
+    - id : Integer
+    - nome : String
+}
+
+enum Status {
+    EDICAO
+    APROVADO
+    CANCELADO
+    ABANDONADO
+}
+
+class PlanoDeVoo {
+    - id : Integer
+    - status : Status
+    - dataHoraPartida : LocalDateTime
+    + aprovar()
+    + cancelar(agora : LocalDateTime)
+    + abandonar()
+}
+
+note right of PlanoDeVoo
+  Somente planos em EDICAO podem ser modificados.
+  Cancelar exige APROVADO e partida futura.
+end note
+
+PlanoDeVoo "*" --> "1" Aeronave : utiliza
+PlanoDeVoo "*" --> "1" Piloto : utiliza
+PlanoDeVoo "*" --> "1" Aeroporto : origem
+PlanoDeVoo "*" --> "1" Aeroporto : destino
+PlanoDeVoo ..> Status
+
+class Percurso {
+    + validarContinuidade(origem : Aeroporto, destino : Aeroporto)
+}
+
+PlanoDeVoo "1" *-- "1" Percurso
+Percurso "1" *-- "0..*" Trecho : {ordenado}
+
+note right of Percurso
+  O plano nasce com percurso vazio;
+  pelo menos um trecho é exigido na validação.
+end note
+
+enum AcaoNaChegada {
+    POUSO
+    SOBREVOO
+}
+
+class Trecho {
+    - altitude : Integer
+    - horarioEntradaNaAerovia : LocalDateTime
+    - acaoNaChegada : AcaoNaChegada
+    - numeroVagaPretendida : Integer [0..1]
+    - tempoPermanenciaMinutos : Integer [0..1]
+    + calcularChegada(velocidadeKmH : Integer) : LocalDateTime
+}
+
+note right of Trecho
+  Se acaoNaChegada = POUSO,
+  vaga e permanência são obrigatórias.
+  Se acaoNaChegada = SOBREVOO,
+  vaga e permanência não se aplicam.
+  No último trecho, POUSO é obrigatório.
+end note
+
+Trecho "*" --> "1" Aerovia : utiliza
+Trecho ..> AcaoNaChegada
+
+' ===== Reservas =====
+
+abstract Reserva {
+    - id : Integer
+    - slot : LocalDateTime
+}
+
+note right of Reserva
+  Uma reserva por slot de uma hora,
+  sempre iniciado na hora cheia.
+  Criadas somente na aprovação.
+end note
+
+class ReservaAerovia {
+    - altitude : Integer
+}
+
+class ReservaEstacionamento {
+    - numeroVaga : Integer
+}
+
+note bottom of ReservaAerovia
+  Única por (aerovia, altitude, slot).
+end note
+
+note bottom of ReservaEstacionamento
+  Única por (aeroporto, numeroVaga, slot).
+end note
+
+Reserva <|-- ReservaAerovia
+Reserva <|-- ReservaEstacionamento
+
+PlanoDeVoo "1" *-- "0..*" Reserva
+ReservaAerovia "*" --> "1" Aerovia
+ReservaEstacionamento "*" --> "1" Aeroporto
+
+@enduml
