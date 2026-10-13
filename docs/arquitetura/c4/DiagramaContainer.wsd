@@ -1,0 +1,20 @@
+@startuml DiagramaContainer
+!pragma layout smetana
+!include <C4/C4_Container>
+title Diagrama de Contêineres - Sistema de Gestão de Planos de Voo
+
+Person(usuario, "Usuário", "Elabora e acompanha planos de voo")
+Person(admin, "Administrador", "Gerencia aeroportos, aerovias, pilotos e aeronaves")
+
+System_Ext(cliente, "Cliente HTTP", "Postman")
+
+System_Boundary(sistema, "Sistema de Gestão de Planos de Voo") {
+  Container(api, "API Backend", "Java, Spring Boot", "Expõe a API REST, aplica as regras de validação e aprovação e controla as reservas")
+  ContainerDb(db, "Banco de Dados", "Tem que decidir qual", "Armazena rede aérea, pilotos, aeronaves, planos de voo e reservas")
+}
+Rel(usuario, cliente, "Usa")
+Rel(admin, cliente, "Usa")
+Rel(cliente, api, "Faz requisições", "HTTP/JSON")
+Rel(api, db, "Lê e grava dados", "JDBC/JPA")
+
+@enduml

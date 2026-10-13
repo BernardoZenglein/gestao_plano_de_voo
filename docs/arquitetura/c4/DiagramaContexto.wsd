@@ -1,0 +1,15 @@
+@startuml DiagramaContexto
+!pragma layout smetana
+!include <C4/C4_Context>
+
+title Diagrama de Contexto - Sistema de Plano de Voo
+
+Person(usuario, "Usuário", "Solicitar um plano de voo")
+Person(admin, "Admistrador", "Gerencia aeroportos, aerovias, pilotos e aeronaves")
+
+System(sistema, "Sistema de Plano de Voo", "Cria valida e aprova planos de voo, controlando a reserva de altitudes nas aerovias e de vagas nos aeroportos")
+
+Rel(usuario, sistema, "Cria, valida, aprova, cancela e consulta planos de voo")
+Rel(admin, sistema, "Cadastra aeroportos, aerovias, pilotos e aeronaves")
+
+@enduml
